@@ -18,6 +18,12 @@ mutation SimulateUnstableJob {
   }
 }
 
+mutation CreateJob($Job: String!) {
+  job: Enqueue(task:$Job) {
+    id
+  }
+}
+
 query GetAllJobs {
   Jobs {
     id

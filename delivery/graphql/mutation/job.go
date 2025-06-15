@@ -15,9 +15,20 @@ type JobMutation struct {
 }
 
 func (q JobMutation) Enqueue(ctx context.Context, args entity.Job) (*resolver.JobResolver, error) {
-	job := entity.Job{}
+	// Call service to enqueue
+	id, err := q.jobService.Enqueue(ctx, args.Task)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch the stored job to get actual data (status, attempts, etc)
+	job, err := q.jobService.GetJobById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
 	return &resolver.JobResolver{
-		Data:       job,
+		Data:       *job,
 		JobService: q.jobService,
 		Dataloader: q.dataloader,
 	}, nil

@@ -46,6 +46,26 @@ func (t *jobRepository) FindAll(ctx context.Context) ([]*entity.Job, error) {
 	return jobs, nil
 }
 
+func (t *jobRepository) CountByStatus(ctx context.Context) (map[string]int32, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	counts := map[string]int32{
+		"pending":   0,
+		"running":   0,
+		"failed":    0,
+		"completed": 0,
+	}
+
+	for _, job := range t.inMemDb {
+		if _, ok := counts[job.Status]; ok {
+			counts[job.Status]++
+		}
+	}
+
+	return counts, nil
+}
+
 // Initiator ...
 type Initiator func(s *jobRepository) *jobRepository
 
