@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"jobqueue/entity"
 	_interface "jobqueue/interface"
-	"math/rand"
+	// "math/rand"
 	"time"
 )
 
@@ -51,7 +51,10 @@ func process(job *entity.Job) bool {
 		}
 		return true
 	}
+	// uncomment for failure simulation
 	// simulate 50% chance failure
 	// if it fails, return false
-	return rand.Intn(2) == 0
+	// return rand.Intn(2) == 0
+	
+	return true
 }
