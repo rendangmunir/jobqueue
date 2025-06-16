@@ -1,0 +1,6 @@
+[submodule "jobqueue"]
+	path = jobqueue
+	url = https://github.com/rendangmunir/jobqueue.git
+[submodule "traffic-light-simulation"]
+	path = traffic-light-simulation
+	url = https://github.com/rendangmunir/traffic-light-simulation.git
