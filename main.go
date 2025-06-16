@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"jobqueue/config"
 	"jobqueue/delivery/graphql"
 	_dataloader "jobqueue/delivery/graphql/dataloader"
@@ -10,8 +11,14 @@ import (
 	"jobqueue/entity"
 	"jobqueue/pkg/handler"
 	"jobqueue/pkg/server"
+	"jobqueue/queue"
 	inmemrepo "jobqueue/repository/inmem"
 	"jobqueue/service"
+	"math/rand"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_graphql "github.com/graph-gophers/graphql-go"
@@ -25,6 +32,7 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	setupLogger()
 	logger := logrus.New()
 	logger.SetReportCaller(true)
@@ -54,11 +62,20 @@ func main() {
 		SetJobRepository(jobRepository).
 		SetBatchFunction().
 		Build()
+		
+	// Set up job queue
+	jobQueue := queue.NewJobQueue(150)
 
 	//set job service
 	jobService := service.NewJobService().
 		SetJobRepository(jobRepository).
+		SetJobQueue(jobQueue).
 		Build()
+	
+	jobHandler := queue.CreateJobHandler(jobService)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	jobQueue.StartWorkers(ctx, 5, jobHandler)
 
 	jobMutation := mutation.NewJobMutation(jobService, dataloader)
 	jobQuery := query.NewJobQuery(jobService, dataloader)
@@ -79,6 +96,26 @@ func main() {
 		dataloader.EchoMiddelware,
 	)
 	e.Echo.GET("/graphiql", handler.GraphiQLHandler)
+	// Handle graceful shutdown
+	go func() {
+		if err := e.Start(); err != nil && err != http.ErrServerClosed  {
+			e.Echo.Logger.Fatal("shutting down the server")
+		}
+	}()
+
+	// Listen for SIGINT/SIGTERM
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	logger.Info("Shutting down server...")
+
+	// Stop server
+	if err := e.Echo.Shutdown(ctx); err != nil {
+		logger.Fatal(err)
+	}
+
+	// Wait for workers
+	jobQueue.Wait()
 	e.Echo.Logger.Fatal(e.Start())
 }
 

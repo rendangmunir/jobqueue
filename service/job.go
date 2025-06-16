@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"jobqueue/entity"
+	"jobqueue/queue"
 	"github.com/google/uuid"
 	_interface "jobqueue/interface"
 )
 
 type jobService struct {
 	jobRepo _interface.JobRepository
+	jobQueue *queue.JobQueue
 }
 
 // Initiator ...
@@ -27,20 +29,26 @@ func (q jobService) GetJobById(ctx context.Context, id string) (*entity.Job, err
 }
 
 func (q jobService) Enqueue(ctx context.Context, taskName string) (string, error) {
-	id := uuid.NewString() // or your preferred ID generator
+	id := uuid.NewString() 
 	job := &entity.Job{
 		ID:       id,
 		Task:     taskName,
-		Status:   "pending",  // initial status
+		Status:   "pending", 
 		Attempts: 0,
 	}
 
-	// Save the job using the repository
 	if err := q.jobRepo.Save(ctx, job); err != nil {
 		return "", err
 	}
+
+	// Add to JobQueue for processing
+	q.jobQueue.Enqueue(job)
 	
 	return id, nil
+}
+
+func (q jobService) Update(ctx context.Context, job *entity.Job) error {
+	return q.jobRepo.Save(ctx, job)
 }
 
 // NewJobService ...
@@ -54,6 +62,13 @@ func NewJobService() Initiator {
 func (i Initiator) SetJobRepository(jobRepository _interface.JobRepository) Initiator {
 	return func(s *jobService) *jobService {
 		i(s).jobRepo = jobRepository
+		return s
+	}
+}
+
+func (i Initiator) SetJobQueue(jobQueue *queue.JobQueue) Initiator {
+	return func(s *jobService) *jobService {
+		i(s).jobQueue = jobQueue
 		return s
 	}
 }

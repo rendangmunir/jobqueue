@@ -10,6 +10,7 @@ type JobService interface {
 	GetAllJobs(ctx context.Context) ([]*entity.Job, error)
 	GetJobStatusSummary(ctx context.Context) (map[string]int32, error)
 	GetJobById(ctx context.Context, id string) (*entity.Job, error)
+	Update(ctx context.Context, job *entity.Job) error
 }
 
 type JobRepository interface {
