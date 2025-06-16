@@ -1,0 +1,7 @@
+jobqueue
+!jobqueue/
+jobqueue_unix
+cmd/jobqueue/debug
+.idea/
+vendor/
+.exe
